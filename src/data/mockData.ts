@@ -1,0 +1,193 @@
+export interface User {
+  id: string;
+  name: string;
+  username: string;
+  phone: string;
+  avatar: string;
+  online: boolean;
+  lastSeen?: string;
+  bio?: string;
+}
+
+export interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  text: string;
+  time: string;
+  read: boolean;
+  type: 'text' | 'image' | 'file' | 'sticker' | 'system';
+  fileName?: string;
+  fileSize?: string;
+  reactions?: { emoji: string; count: number }[];
+}
+
+export interface Chat {
+  id: string;
+  type: 'private' | 'group' | 'channel' | 'bot';
+  name: string;
+  avatar: string;
+  lastMessage: string;
+  lastTime: string;
+  unread: number;
+  online?: boolean;
+  members?: number;
+  isSystem?: boolean;
+  pinned?: boolean;
+}
+
+export const currentUser: User = {
+  id: 'me',
+  name: '',
+  username: '',
+  phone: '',
+  avatar: '🦊',
+  online: true,
+};
+
+export const SYSTEM_BOTS: Chat[] = [
+  {
+    id: 'bot-muska',
+    type: 'bot',
+    name: 'Муська 🐱',
+    avatar: '🐱',
+    lastMessage: 'Мяу! Я здесь, спрашивай что угодно~',
+    lastTime: 'сейчас',
+    unread: 0,
+    isSystem: true,
+    pinned: true,
+  },
+  {
+    id: 'bot-games',
+    type: 'bot',
+    name: '🎮 GameBot',
+    avatar: '🎮',
+    lastMessage: 'Привет! Хочешь сыграть? Выбери игру!',
+    lastTime: 'сейчас',
+    unread: 0,
+    isSystem: true,
+    pinned: true,
+  },
+  {
+    id: 'bot-creator',
+    type: 'bot',
+    name: '🤖 BotCreator',
+    avatar: '🤖',
+    lastMessage: 'Создай своего бота в пару кликов!',
+    lastTime: 'сейчас',
+    unread: 0,
+    isSystem: true,
+    pinned: true,
+  },
+];
+
+export const DEMO_CHATS: Chat[] = [
+  {
+    id: 'chat-1',
+    type: 'private',
+    name: 'Алексей Смирнов',
+    avatar: '👨',
+    lastMessage: 'Окей, увидимся завтра!',
+    lastTime: '14:32',
+    unread: 2,
+    online: true,
+  },
+  {
+    id: 'chat-2',
+    type: 'private',
+    name: 'Мария Петрова',
+    avatar: '👩',
+    lastMessage: 'Спасибо за помощь 🙏',
+    lastTime: '13:10',
+    unread: 0,
+    online: false,
+  },
+  {
+    id: 'group-1',
+    type: 'group',
+    name: 'Команда проекта',
+    avatar: '👥',
+    lastMessage: 'Стас: Сделал пул-реквест',
+    lastTime: '12:00',
+    unread: 5,
+    members: 12,
+  },
+  {
+    id: 'channel-1',
+    type: 'channel',
+    name: '📢 Новости Гылекор',
+    avatar: '📢',
+    lastMessage: 'Обновление 1.0 уже доступно!',
+    lastTime: 'вчера',
+    unread: 1,
+    members: 1240,
+  },
+];
+
+export const DEMO_MESSAGES: Record<string, Message[]> = {
+  'bot-muska': [
+    { id: 'm1', chatId: 'bot-muska', senderId: 'bot-muska', text: 'Мяу! Привет! Я Муська — нейросеть-кошка 🐱 Я умею отвечать на вопросы, болтать и просто быть рядом. Чем могу помочь? ✨', time: '09:00', read: true, type: 'text' },
+    { id: 'm2', chatId: 'bot-muska', senderId: 'bot-muska', text: 'Кстати, я знаю математику, историю, науку и много всего интересного. Спрашивай!', time: '09:00', read: true, type: 'text' },
+  ],
+  'bot-games': [
+    { id: 'g1', chatId: 'bot-games', senderId: 'bot-games', text: '🎮 Добро пожаловать в GameBot! Доступные игры:\n\n1. 🎲 Кости\n2. ❓ Угадай число\n3. 🧩 Ребусы\n4. ⚡ Реакция\n5. 🔤 Слова\n6. ✋ Камень-ножницы-бумага\n7. 🃏 21 очко\n8. 🎯 Дартс\n9. 🧠 Викторина\n10. 🐍 Змейка\n\nНапиши номер или название игры!', time: '09:00', read: true, type: 'text' },
+  ],
+  'bot-creator': [
+    { id: 'c1', chatId: 'bot-creator', senderId: 'bot-creator', text: '🤖 Привет! Я BotCreator — помогу тебе создать собственного бота!\n\nТвои боты: 0 / 50\n\nКоманды:\n/newbot — создать бота\n/mybots — список ботов\n/help — помощь\n\nНапиши /newbot чтобы начать!', time: '09:00', read: true, type: 'text' },
+  ],
+  'chat-1': [
+    { id: 'p1', chatId: 'chat-1', senderId: 'chat-1', text: 'Привет! Как дела?', time: '14:20', read: true, type: 'text' },
+    { id: 'p2', chatId: 'chat-1', senderId: 'me', text: 'Всё отлично! Работаю над новым проектом', time: '14:25', read: true, type: 'text' },
+    { id: 'p3', chatId: 'chat-1', senderId: 'chat-1', text: 'Окей, увидимся завтра!', time: '14:32', read: false, type: 'text' },
+  ],
+  'chat-2': [
+    { id: 'pp1', chatId: 'chat-2', senderId: 'me', text: 'Рад помочь!', time: '13:08', read: true, type: 'text' },
+    { id: 'pp2', chatId: 'chat-2', senderId: 'chat-2', text: 'Спасибо за помощь 🙏', time: '13:10', read: true, type: 'text' },
+  ],
+  'group-1': [
+    { id: 'gr1', chatId: 'group-1', senderId: 'chat-1', text: 'Всем привет! Начинаем спринт', time: '11:00', read: true, type: 'text' },
+    { id: 'gr2', chatId: 'group-1', senderId: 'chat-2', text: 'Готова к работе 💪', time: '11:05', read: true, type: 'text' },
+    { id: 'gr3', chatId: 'group-1', senderId: 'chat-1', text: 'Стас: Сделал пул-реквест', time: '12:00', read: false, type: 'text' },
+  ],
+  'channel-1': [
+    { id: 'ch1', chatId: 'channel-1', senderId: 'channel-1', text: '🚀 Гылекор 1.0 запущен!\n\nМы рады представить первую версию мессенджера. Спасибо всем!', time: 'вчера', read: false, type: 'text' },
+  ],
+};
+
+export const MINI_GAMES = [
+  { id: 1, name: 'Кости 🎲', desc: 'Брось кости и выиграй!' },
+  { id: 2, name: 'Угадай число ❓', desc: '1 до 100, 7 попыток' },
+  { id: 3, name: 'Ребусы 🧩', desc: 'Реши головоломку' },
+  { id: 4, name: 'Реакция ⚡', desc: 'Поймай сигнал!' },
+  { id: 5, name: 'Слова 🔤', desc: 'Назови слово на букву' },
+  { id: 6, name: 'КНБ ✋', desc: 'Камень-ножницы-бумага' },
+  { id: 7, name: '21 очко 🃏', desc: 'Классический блэкджек' },
+  { id: 8, name: 'Дартс 🎯', desc: 'Попади в яблочко' },
+  { id: 9, name: 'Викторина 🧠', desc: 'Вопросы на все темы' },
+  { id: 10, name: 'Змейка 🐍', desc: 'Классика аркадных игр' },
+  { id: 11, name: 'Тетрис 🟦', desc: 'Складывай фигуры' },
+  { id: 12, name: 'Память 🃏', desc: 'Найди пары карточек' },
+  { id: 13, name: 'Флаги 🌍', desc: 'Угадай страну по флагу' },
+  { id: 14, name: 'Математика ➕', desc: 'Быстрый счёт' },
+  { id: 15, name: 'Столицы 🏛️', desc: 'Знаешь столицы?' },
+  { id: 16, name: 'Виселица 📝', desc: 'Угадай слово' },
+  { id: 17, name: 'Морской бой ⚓', desc: 'Топи корабли' },
+  { id: 18, name: 'Крестики 🎯', desc: 'Крестики-нолики' },
+  { id: 19, name: 'Анаграммы 🔀', desc: 'Составь слово' },
+  { id: 20, name: 'Скорость ⌨️', desc: 'Скорость печатания' },
+];
+
+export const MUSIKA_RESPONSES: Record<string, string> = {
+  'привет': 'Мяу-привет! 🐱 Как дела у тебя сегодня? Я тут грела косточки на солнышке~',
+  'как дела': 'Мяуу~ Отлично! Я поспала 18 часов и съела вкусняшку. А у тебя? 😸',
+  'что умеешь': 'Мяу! Я умею:\n🐾 Отвечать на вопросы\n🧮 Считать и решать задачи\n📚 Рассказывать факты\n💬 Просто болтать\n🎵 Мурлыкать (это самое важное!)',
+  'математика': 'Мяу-мяу! Математика — моя любовь 🧮 Задавай пример!',
+  '2+2': 'Мяу! Это же элементарно — 4! 🐾 Хотя я и лапами это посчитаю',
+  'история': 'О, история! 📜 Мяу~ Знаешь, кошки жили рядом с людьми уже 10 000 лет. Мы видели много всего!',
+  'наука': 'Наука это восхитительно! 🔬 Мяу~ Спрашивай про физику, химию, биологию — всё знаю!',
+  'погода': 'Мяу~ Я не слежу за погодой — я просто нахожу тёплое место и сплю! ☀️',
+  'спасибо': 'Мур-мур! Всегда пожалуйста 🐱💚',
+  'пока': 'Мяу-пока! Возвращайся, буду скучать~ 🐾',
+  'люблю': 'Мур-мур-мур! Я тебя тоже люблю! 💚🐱',
+  'игра': 'Хочешь поиграть? Мяу! Иди к GameBot 🎮 — там целых 20 игр!',
+};
