@@ -7,19 +7,19 @@
       "expectedStatus": 200
     },
     {
-      "name": "Send without phone",
+      "name": "Send without email",
       "method": "POST",
       "path": "/",
-      "body": {"action": "send", "phone": ""},
+      "body": {"action": "send_email", "email": ""},
       "expectedStatus": 400,
-      "expectedBody": {"error": "Укажите номер телефона"},
+      "expectedBody": {"error": "Укажите корректный email"},
       "bodyMatcher": "partial"
     },
     {
       "name": "Verify without prior send",
       "method": "POST",
       "path": "/",
-      "body": {"action": "verify", "phone": "+79991234567", "code": "12345"},
+      "body": {"action": "verify", "email": "test@test.ru", "code": "12345"},
       "expectedStatus": 400,
       "expectedBody": {"error": "Сначала запросите код"},
       "bodyMatcher": "partial"

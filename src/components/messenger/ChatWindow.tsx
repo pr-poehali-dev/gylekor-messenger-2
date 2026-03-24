@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
-import { Chat, Message, DEMO_MESSAGES, MINI_GAMES, MUSIKA_RESPONSES, currentUser } from '@/data/mockData';
+import { Chat, Message, DEMO_MESSAGES, MINI_GAMES, MUSIKA_RESPONSES, MUSIKA_GENERIC, currentUser } from '@/data/mockData';
 
 interface ChatWindowProps {
   chat: Chat;
@@ -60,22 +60,16 @@ export default function ChatWindow({ chat, currentUserName, currentUserAvatar, o
 
     if (chat.id === 'bot-muska') {
       setIsTyping(true);
-      await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+      await new Promise(r => setTimeout(r, 700 + Math.random() * 800));
       setIsTyping(false);
       const lower = text.toLowerCase();
-      let reply = '';
+      let replies: string[] | undefined;
       for (const key of Object.keys(MUSIKA_RESPONSES)) {
-        if (lower.includes(key)) { reply = MUSIKA_RESPONSES[key]; break; }
+        if (lower.includes(key)) { replies = MUSIKA_RESPONSES[key]; break; }
       }
-      if (!reply) {
-        const generic = [
-          `Мяу~ Интересный вопрос! Я подумаю... 🐾 Скажи мне ещё что-нибудь!`,
-          `Мур-мур! Не совсем понимаю, но мне нравится с тобой говорить 🐱`,
-          `Мяу! Это сложно... но я постараюсь разобраться! ✨`,
-          `Хм, Муська думает... 🤔 А тем временем: кошки видят в темноте в 6 раз лучше людей!`,
-        ];
-        reply = generic[Math.floor(Math.random() * generic.length)];
-      }
+      const reply = replies
+        ? replies[Math.floor(Math.random() * replies.length)]
+        : MUSIKA_GENERIC[Math.floor(Math.random() * MUSIKA_GENERIC.length)];
       addMessage(reply, 'bot-muska');
     } else if (chat.id === 'bot-creator') {
       setIsTyping(true);

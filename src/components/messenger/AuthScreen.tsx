@@ -8,37 +8,45 @@ interface AuthScreenProps {
 const AVATARS = ['🦊', '🐺', '🦁', '🐯', '🐻', '🐼', '🦋', '🐉', '🦅', '🌟', '🔥', '💎'];
 
 export default function AuthScreen({ onAuth }: AuthScreenProps) {
-  const [step, setStep] = useState<'phone' | 'code' | 'profile'>('phone');
+  const [step, setStep] = useState<'phone' | 'email' | 'code' | 'profile'>('phone');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState('🦊');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
 
-  const SMS_API = 'https://functions.poehali.dev/bcebbc69-220c-4d8c-8ec6-310e451b5eaf';
+  const EMAIL_API = 'https://functions.poehali.dev/bcebbc69-220c-4d8c-8ec6-310e451b5eaf';
 
-  const handleSendCode = async () => {
+  const handlePhoneNext = () => {
     if (phone.replace(/\D/g, '').length < 10) {
       setError('Введите корректный номер телефона');
+      return;
+    }
+    setError('');
+    setStep('email');
+  };
+
+  const handleSendCode = async () => {
+    if (!email.includes('@') || !email.includes('.')) {
+      setError('Введите корректный email');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(SMS_API, {
+      const res = await fetch(EMAIL_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send', phone })
+        body: JSON.stringify({ action: 'send_email', email, phone })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка отправки');
-      setCodeSent(true);
       setStep('code');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось отправить SMS');
+      setError(e instanceof Error ? e.message : 'Не удалось отправить письмо');
     } finally {
       setLoading(false);
     }
@@ -46,16 +54,16 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
 
   const handleVerifyCode = async () => {
     if (code.length < 5) {
-      setError('Введите 5-значный код из SMS');
+      setError('Введите 5-значный код из письма');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(SMS_API, {
+      const res = await fetch(EMAIL_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify', phone, code })
+        body: JSON.stringify({ action: 'verify', email, code })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Неверный код');
@@ -90,6 +98,9 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
     return result;
   };
 
+  const steps = ['phone', 'email', 'code', 'profile'];
+  const stepIndex = steps.indexOf(step);
+
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #e8f8ee 0%, #f0fdf4 50%, #dcfce7 100%)' }}>
       <div className="w-full max-w-sm mx-4">
@@ -110,24 +121,49 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-6 animate-scale-in">
+
           {step === 'phone' && (
             <div className="space-y-4">
               <div className="text-center">
                 <div className="text-2xl mb-2">📱</div>
                 <h2 className="text-lg font-bold text-gray-800">Войти в Гылекор</h2>
-                <p className="text-xs text-gray-500 mt-1">Введите номер телефона — отправим код</p>
+                <p className="text-xs text-gray-500 mt-1">Введите ваш номер телефона</p>
               </div>
-              <div>
-                <input
-                  className="input-field"
-                  placeholder="+7 (999) 999-99-99"
-                  value={phone}
-                  onChange={e => setPhone(formatPhone(e.target.value))}
-                  onKeyDown={e => e.key === 'Enter' && handleSendCode()}
-                  type="tel"
-                  autoFocus
-                />
+              <input
+                className="input-field"
+                placeholder="+7 (999) 999-99-99"
+                value={phone}
+                onChange={e => setPhone(formatPhone(e.target.value))}
+                onKeyDown={e => e.key === 'Enter' && handlePhoneNext()}
+                type="tel"
+                autoFocus
+              />
+              {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+              <button className="green-btn w-full" onClick={handlePhoneNext}>
+                Далее
+              </button>
+              <p className="text-xs text-gray-400 text-center">
+                Регистрируясь, вы соглашаетесь с условиями использования
+              </p>
+            </div>
+          )}
+
+          {step === 'email' && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-2xl mb-2">✉️</div>
+                <h2 className="text-lg font-bold text-gray-800">Укажите email</h2>
+                <p className="text-xs text-gray-500 mt-1">Отправим код подтверждения на почту</p>
               </div>
+              <input
+                className="input-field"
+                placeholder="example@mail.ru"
+                value={email}
+                onChange={e => setEmail(e.target.value.trim())}
+                onKeyDown={e => e.key === 'Enter' && handleSendCode()}
+                type="email"
+                autoFocus
+              />
               {error && <p className="text-red-500 text-xs text-center">{error}</p>}
               <button className="green-btn w-full" onClick={handleSendCode} disabled={loading}>
                 {loading ? (
@@ -137,18 +173,18 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
                   </span>
                 ) : 'Получить код'}
               </button>
-              <p className="text-xs text-gray-400 text-center">
-                Регистрируясь, вы соглашаетесь с условиями использования
-              </p>
+              <button className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setStep('phone'); setError(''); }}>
+                ← Изменить номер
+              </button>
             </div>
           )}
 
           {step === 'code' && (
             <div className="space-y-4">
               <div className="text-center">
-                <div className="text-2xl mb-2">💬</div>
+                <div className="text-2xl mb-2">📬</div>
                 <h2 className="text-lg font-bold text-gray-800">Введите код</h2>
-                <p className="text-xs text-gray-500 mt-1">Отправили SMS на <span className="font-semibold text-gray-700">{phone}</span></p>
+                <p className="text-xs text-gray-500 mt-1">Отправили письмо на <span className="font-semibold text-gray-700">{email}</span></p>
               </div>
               <div className="flex gap-2 justify-center">
                 {[0,1,2,3,4].map(i => (
@@ -179,8 +215,8 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
               <button className="green-btn w-full" onClick={handleVerifyCode} disabled={loading}>
                 {loading ? 'Проверяем...' : 'Подтвердить'}
               </button>
-              <button className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setStep('phone'); setCode(''); setError(''); }}>
-                ← Изменить номер
+              <button className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setStep('email'); setCode(''); setError(''); }}>
+                ← Изменить email
               </button>
             </div>
           )}
@@ -193,7 +229,6 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
                 <p className="text-xs text-gray-500 mt-1">Как вас будут называть в Гылекор?</p>
               </div>
 
-              {/* Avatar picker */}
               <div>
                 <p className="text-xs font-medium text-gray-600 mb-2">Выберите аватар</p>
                 <div className="grid grid-cols-6 gap-2">
@@ -240,9 +275,9 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
 
         {/* Step dots */}
         <div className="flex justify-center gap-2 mt-4">
-          {['phone', 'code', 'profile'].map((s, i) => (
-            <div key={s} className="w-2 h-2 rounded-full transition-all"
-              style={{ background: step === s ? 'var(--g-green)' : '#c8e6d0', width: step === s ? '20px' : '8px' }} />
+          {steps.map((s) => (
+            <div key={s} className="h-2 rounded-full transition-all"
+              style={{ background: steps.indexOf(s) <= stepIndex ? 'var(--g-green)' : '#c8e6d0', width: step === s ? '20px' : '8px' }} />
           ))}
         </div>
       </div>

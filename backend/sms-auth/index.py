@@ -3,105 +3,117 @@ import json
 import random
 import time
 import hashlib
-import urllib.request
-import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-# Хранилище кодов в памяти (phone -> {code, expires})
-# В проде лучше использовать Redis/DB, но для MVP — достаточно
+# Хранилище кодов в памяти (key -> {code, expires, attempts})
 _codes: dict = {}
 
-def _send_sms(phone: str, code: str) -> dict:
-    """Отправляет SMS через SMS.ru API"""
-    api_id = os.environ.get('SMSRU_API_ID', '')
-    clean_phone = ''.join(c for c in phone if c.isdigit())
-    if clean_phone.startswith('8'):
-        clean_phone = '7' + clean_phone[1:]
-    
-    params = urllib.parse.urlencode({
-        'api_id': api_id,
-        'to': clean_phone,
-        'msg': f'Ваш код Гылекор: {code}',
-        'json': 1
-    })
-    url = f'https://sms.ru/sms/send?{params}'
-    
-    req = urllib.request.Request(url)
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        return json.loads(resp.read().decode())
+def _detect_smtp(email_addr: str) -> tuple:
+    """Определяет SMTP-сервер по домену email"""
+    domain = email_addr.split('@')[-1].lower()
+    if 'yandex' in domain or 'ya.ru' in domain:
+        return 'smtp.yandex.ru', 465
+    elif 'gmail' in domain:
+        return 'smtp.gmail.com', 465
+    else:
+        return 'smtp.mail.ru', 465
+
+
+def _send_email(to_email: str, code: str) -> None:
+    """Отправляет письмо с кодом верификации"""
+    from_email = os.environ.get('SMTP_EMAIL', '')
+    password = os.environ.get('SMTP_PASSWORD', '')
+    host, port = _detect_smtp(from_email)
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f'Код входа в Гылекор: {code}'
+    msg['From'] = f'Gylecor <{from_email}>'
+    msg['To'] = to_email
+
+    text_body = f'Ваш код для входа в Гылекор: {code}\n\nКод действителен 5 минут. Никому не сообщайте его.'
+    html_body = f'''
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #f0fdf4; border-radius: 16px;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <h1 style="color: #1a1a1a; font-size: 22px; margin: 0;">Гылекор</h1>
+        <p style="color: #6b7280; font-size: 13px; margin: 4px 0 0;">Мессенджер нового поколения</p>
+      </div>
+      <div style="background: white; border-radius: 12px; padding: 24px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <p style="color: #374151; margin: 0 0 16px; font-size: 15px;">Ваш код для входа:</p>
+        <div style="letter-spacing: 8px; font-size: 36px; font-weight: bold; color: #2db55d; margin: 0 0 16px;">{code}</div>
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">Код действителен 5 минут.<br>Никому не сообщайте его.</p>
+      </div>
+    </div>
+    '''
+
+    msg.attach(MIMEText(text_body, 'plain'))
+    msg.attach(MIMEText(html_body, 'html'))
+
+    with smtplib.SMTP_SSL(host, port) as server:
+        server.login(from_email, password)
+        server.sendmail(from_email, to_email, msg.as_string())
 
 
 def handler(event: dict, context) -> dict:
-    """Обработчик SMS-верификации для мессенджера Гылекор"""
+    """Обработчик email-верификации для мессенджера Гылекор"""
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Content-Type': 'application/json'
     }
-    
+
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': headers, 'body': ''}
-    
+
     body = json.loads(event.get('body') or '{}')
     action = body.get('action')
-    
-    # Отправка кода
-    if action == 'send':
-        phone = body.get('phone', '').strip()
-        if not phone:
-            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Укажите номер телефона'})}
-        
+
+    if action == 'send_email':
+        email = body.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Укажите корректный email'})}
+
         code = str(random.randint(10000, 99999))
-        expires = time.time() + 300  # 5 минут
-        phone_key = ''.join(c for c in phone if c.isdigit())
-        _codes[phone_key] = {'code': code, 'expires': expires, 'attempts': 0}
-        
-        result = _send_sms(phone, code)
-        
-        sms_ok = result.get('status') == 'OK'
-        if not sms_ok:
-            return {
-                'statusCode': 500,
-                'headers': headers,
-                'body': json.dumps({'error': 'Не удалось отправить SMS', 'detail': result})
-            }
-        
+        expires = time.time() + 300
+        _codes[email] = {'code': code, 'expires': expires, 'attempts': 0}
+
+        _send_email(email, code)
+
         return {
             'statusCode': 200,
             'headers': headers,
-            'body': json.dumps({'success': True, 'message': f'SMS отправлено на {phone}'})
+            'body': json.dumps({'success': True, 'message': f'Письмо отправлено на {email}'})
         }
-    
-    # Проверка кода
+
     if action == 'verify':
-        phone = body.get('phone', '').strip()
+        email = body.get('email', '').strip().lower()
         code = body.get('code', '').strip()
-        phone_key = ''.join(c for c in phone if c.isdigit())
-        
-        entry = _codes.get(phone_key)
+
+        entry = _codes.get(email)
         if not entry:
             return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Сначала запросите код'})}
-        
+
         if time.time() > entry['expires']:
-            del _codes[phone_key]
+            del _codes[email]
             return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Код устарел, запросите новый'})}
-        
+
         entry['attempts'] += 1
         if entry['attempts'] > 5:
-            del _codes[phone_key]
+            del _codes[email]
             return {'statusCode': 429, 'headers': headers, 'body': json.dumps({'error': 'Слишком много попыток, запросите новый код'})}
-        
+
         if entry['code'] != code:
             return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Неверный код'})}
-        
-        del _codes[phone_key]
-        # Генерируем простой токен сессии
-        session = hashlib.sha256(f'{phone_key}{time.time()}{random.random()}'.encode()).hexdigest()
-        
+
+        del _codes[email]
+        session = hashlib.sha256(f'{email}{time.time()}{random.random()}'.encode()).hexdigest()
+
         return {
             'statusCode': 200,
             'headers': headers,
-            'body': json.dumps({'success': True, 'session': session, 'phone': phone})
+            'body': json.dumps({'success': True, 'session': session, 'email': email})
         }
-    
+
     return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'error': 'Неизвестное действие'})}
