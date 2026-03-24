@@ -18,6 +18,8 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
   const [error, setError] = useState('');
   const [codeSent, setCodeSent] = useState(false);
 
+  const SMS_API = 'https://functions.poehali.dev/bcebbc69-220c-4d8c-8ec6-310e451b5eaf';
+
   const handleSendCode = async () => {
     if (phone.replace(/\D/g, '').length < 10) {
       setError('Введите корректный номер телефона');
@@ -25,22 +27,44 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
     }
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 1200));
-    setLoading(false);
-    setCodeSent(true);
-    setStep('code');
+    try {
+      const res = await fetch(SMS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', phone })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка отправки');
+      setCodeSent(true);
+      setStep('code');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось отправить SMS');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVerifyCode = async () => {
-    if (code.length < 4) {
-      setError('Введите код из SMS');
+    if (code.length < 5) {
+      setError('Введите 5-значный код из SMS');
       return;
     }
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false);
-    setStep('profile');
+    try {
+      const res = await fetch(SMS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', phone, code })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Неверный код');
+      setStep('profile');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка проверки кода');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleComplete = () => {

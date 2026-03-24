@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Send without phone",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "send", "phone": ""},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "Укажите номер телефона"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Verify without prior send",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "verify", "phone": "+79991234567", "code": "12345"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "Сначала запросите код"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
