@@ -7,6 +7,8 @@ import RightPanel from '@/components/messenger/RightPanel';
 import CallScreen from '@/components/messenger/CallScreen';
 import { Chat, SYSTEM_BOTS } from '@/data/mockData';
 
+const USERS_API = 'https://functions.poehali.dev/55923b90-36f0-401f-89f8-f5d548667899';
+
 type Section = 'chats' | 'contacts' | 'groups' | 'channels' | 'bots' | 'settings' | 'profile';
 
 interface UserData {
@@ -14,6 +16,9 @@ interface UserData {
   username: string;
   phone: string;
   avatar: string;
+  email?: string;
+  token?: string;
+  userId?: number;
 }
 
 export default function Index() {
@@ -31,8 +36,47 @@ export default function Index() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const handleAuth = (userData: UserData) => {
-    setUser(userData);
+  // Пинг онлайн-статуса каждые 30 сек
+  useEffect(() => {
+    if (!user?.token) return;
+    const ping = () => fetch(`${USERS_API}?action=ping`, { headers: { 'X-Session-Token': user.token! } });
+    ping();
+    const iv = setInterval(ping, 30000);
+    const offline = () => fetch(USERS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Session-Token': user.token! },
+      body: JSON.stringify({ action: 'offline' })
+    });
+    window.addEventListener('beforeunload', offline);
+    return () => { clearInterval(iv); window.removeEventListener('beforeunload', offline); };
+  }, [user?.token]);
+
+  const handleAuth = async (authData: { name: string; username: string; phone: string; avatar: string; email?: string; session?: string }) => {
+    try {
+      const res = await fetch(USERS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register',
+          name: authData.name,
+          username: authData.username,
+          phone: authData.phone,
+          avatar: authData.avatar,
+          email: authData.email || '',
+          session: authData.session || '',
+        })
+      });
+      const data = await res.json();
+      const userData: UserData = {
+        ...authData,
+        token: data.token,
+        userId: data.id,
+      };
+      setUser(userData);
+    } catch {
+      // Даже если бэкенд упал — пускаем в приложение
+      setUser(authData);
+    }
     setTimeout(() => {
       setActiveChat(SYSTEM_BOTS[0]);
       setActiveSection('chats');
@@ -54,12 +98,24 @@ export default function Index() {
     if (user) setUser({ ...user, name: data.name, username: data.username });
   };
 
+  const handleCall = (chat: Chat, type: 'audio' | 'video') => {
+    setCall({ chat, type });
+  };
+
   if (!user) {
     return <AuthScreen onAuth={handleAuth} />;
   }
 
   if (call) {
-    return <CallScreen chat={call.chat} type={call.type} onEnd={() => setCall(null)} />;
+    return (
+      <CallScreen
+        chat={call.chat}
+        type={call.type}
+        onEnd={() => setCall(null)}
+        myUserId={user.userId}
+        token={user.token}
+      />
+    );
   }
 
   const showChatList = activeSection === 'chats' || activeSection === 'groups' || activeSection === 'channels' || activeSection === 'bots';
@@ -114,7 +170,7 @@ export default function Index() {
                 </svg>
               </div>
               <h2 className="text-2xl font-black text-gray-800 mb-2">Гылекор</h2>
-              <p className="text-gray-500 text-sm max-w-xs">Выберите чат слева<br/>или найдите новых собеседников</p>
+              <p className="text-gray-500 text-sm max-w-xs">Выберите чат или найдите контакт<br/>через раздел «Контакты»</p>
               <div className="mt-6 flex flex-col items-center gap-2">
                 <p className="text-xs text-gray-400">Системные боты всегда онлайн 🟢</p>
                 <div className="flex gap-2 flex-wrap justify-center">
@@ -139,8 +195,11 @@ export default function Index() {
             userUsername={user.username}
             userAvatar={user.avatar}
             userPhone={user.phone}
+            token={user.token || ''}
+            userId={user.userId || 0}
             onSelectChat={handleSelectChat}
             onUpdateProfile={handleUpdateProfile}
+            onCall={handleCall}
           />
         )}
       </div>

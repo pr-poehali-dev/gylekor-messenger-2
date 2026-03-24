@@ -1,3 +1,5 @@
 {
+  "signaling": "https://functions.poehali.dev/4b97d916-f932-4fdb-bab8-327ae8c0621a",
+  "users": "https://functions.poehali.dev/55923b90-36f0-401f-89f8-f5d548667899",
   "sms-auth": "https://functions.poehali.dev/bcebbc69-220c-4d8c-8ec6-310e451b5eaf"
 }

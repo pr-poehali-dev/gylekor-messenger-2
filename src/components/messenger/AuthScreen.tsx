@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 
 interface AuthScreenProps {
-  onAuth: (user: { name: string; username: string; phone: string; avatar: string }) => void;
+  onAuth: (user: { name: string; username: string; phone: string; avatar: string; email: string; session: string }) => void;
 }
 
 const AVATARS = ['🦊', '🐺', '🦁', '🐯', '🐻', '🐼', '🦋', '🐉', '🦅', '🌟', '🔥', '💎'];
@@ -12,6 +12,8 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [session, setSession] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [avatar, setAvatar] = useState('🦊');
@@ -45,12 +47,19 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка отправки');
       setStep('code');
+      setResendTimer(60);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Не удалось отправить письмо');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const t = setTimeout(() => setResendTimer(r => r - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendTimer]);
 
   const handleVerifyCode = async () => {
     if (code.length < 5) {
@@ -67,6 +76,7 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Неверный код');
+      setSession(data.session || '');
       setStep('profile');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ошибка проверки кода');
@@ -79,7 +89,7 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
     if (!name.trim()) { setError('Введите ваше имя'); return; }
     if (!username.trim()) { setError('Введите @адрес'); return; }
     if (username.includes(' ')) { setError('@адрес не должен содержать пробелы'); return; }
-    onAuth({ name, username: username.replace('@', ''), phone, avatar });
+    onAuth({ name, username: username.replace('@', ''), phone, avatar, email, session });
   };
 
   const formatPhone = (v: string) => {
@@ -215,9 +225,19 @@ export default function AuthScreen({ onAuth }: AuthScreenProps) {
               <button className="green-btn w-full" onClick={handleVerifyCode} disabled={loading}>
                 {loading ? 'Проверяем...' : 'Подтвердить'}
               </button>
-              <button className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setStep('email'); setCode(''); setError(''); }}>
-                ← Изменить email
-              </button>
+              <div className="flex items-center justify-between">
+                <button className="text-xs text-gray-400 hover:text-gray-600 transition-colors" onClick={() => { setStep('email'); setCode(''); setError(''); }}>
+                  ← Изменить email
+                </button>
+                <button
+                  className="text-xs font-medium transition-colors disabled:opacity-40"
+                  style={{ color: resendTimer > 0 ? '#9ca3af' : 'var(--g-green)' }}
+                  disabled={resendTimer > 0 || loading}
+                  onClick={() => { setCode(''); setError(''); handleSendCode(); }}
+                >
+                  {resendTimer > 0 ? `Повторить через ${resendTimer}с` : 'Отправить снова'}
+                </button>
+              </div>
             </div>
           )}
 

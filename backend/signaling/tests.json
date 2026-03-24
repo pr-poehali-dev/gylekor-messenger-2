@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET without room_id",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST without room_id",
+      "method": "POST",
+      "path": "/",
+      "body": {"type": "offer", "payload": {}},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
